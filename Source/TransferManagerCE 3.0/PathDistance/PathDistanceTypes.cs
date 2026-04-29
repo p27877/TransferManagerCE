@@ -224,10 +224,119 @@ namespace TransferManagerCE.CustomManager
             if (bGoodsMaterial)
             {
                 return VehicleInfo.VehicleCategory.CargoTruck | VehicleInfo.VehicleCategory.CargoPlane | VehicleInfo.VehicleCategory.CargoShip | VehicleInfo.VehicleCategory.CargoTrain;
-            } 
+            }
             else
             {
                 return VehicleInfo.VehicleCategory.RoadTransport;
+            }
+        }
+
+        public static VehicleInfo.VehicleCategory GetBspVehicleCategory(CustomTransferReason.Reason material)
+        {
+            switch (material)
+            {
+                case CustomTransferReason.Reason.Dead:
+                case CustomTransferReason.Reason.DeadMove:
+                    return VehicleInfo.VehicleCategory.Hearse;
+
+                case CustomTransferReason.Reason.Sick:
+                case CustomTransferReason.Reason.SickMove:
+                case CustomTransferReason.Reason.Sick2:
+                case CustomTransferReason.Reason.ElderCare:
+                case CustomTransferReason.Reason.ChildCare:
+                    return VehicleInfo.VehicleCategory.Ambulance;
+
+                case CustomTransferReason.Reason.Crime:
+                case CustomTransferReason.Reason.CriminalMove:
+                    return VehicleInfo.VehicleCategory.Police;
+
+                case CustomTransferReason.Reason.Crime2:
+                    return VehicleInfo.VehicleCategory.PoliceCopter | VehicleInfo.VehicleCategory.Police;
+
+                case CustomTransferReason.Reason.Fire:
+                case CustomTransferReason.Reason.ForestFire:
+                    return VehicleInfo.VehicleCategory.FireTruck;
+
+                case CustomTransferReason.Reason.Fire2:
+                    return VehicleInfo.VehicleCategory.FireCopter | VehicleInfo.VehicleCategory.FireTruck;
+
+                case CustomTransferReason.Reason.Collapsed:
+                    return VehicleInfo.VehicleCategory.Disaster;
+
+                case CustomTransferReason.Reason.Collapsed2:
+                    return VehicleInfo.VehicleCategory.DisasterCopter | VehicleInfo.VehicleCategory.Disaster;
+
+                case CustomTransferReason.Reason.Garbage:
+                case CustomTransferReason.Reason.GarbageMove:
+                case CustomTransferReason.Reason.GarbageTransfer:
+                    return VehicleInfo.VehicleCategory.GarbageTruck;
+
+                case CustomTransferReason.Reason.Mail:
+                case CustomTransferReason.Reason.Mail2:
+                case CustomTransferReason.Reason.UnsortedMail:
+                case CustomTransferReason.Reason.SortedMail:
+                case CustomTransferReason.Reason.IncomingMail:
+                case CustomTransferReason.Reason.OutgoingMail:
+                    return VehicleInfo.VehicleCategory.PostTruck;
+
+                case CustomTransferReason.Reason.Cash:
+                    return VehicleInfo.VehicleCategory.BankTruck;
+
+                case CustomTransferReason.Reason.RoadMaintenance:
+                    return VehicleInfo.VehicleCategory.MaintenanceTruck;
+
+                case CustomTransferReason.Reason.Snow:
+                case CustomTransferReason.Reason.SnowMove:
+                    return VehicleInfo.VehicleCategory.SnowTruck;
+
+                case CustomTransferReason.Reason.ParkMaintenance:
+                    return VehicleInfo.VehicleCategory.ParkTruck;
+
+                case CustomTransferReason.Reason.Taxi:
+                case CustomTransferReason.Reason.TaxiMove:
+                    return VehicleInfo.VehicleCategory.Taxi;
+
+                case CustomTransferReason.Reason.Bus:
+                case CustomTransferReason.Reason.BiofuelBus:
+                case CustomTransferReason.Reason.TouristBus:
+                case CustomTransferReason.Reason.IntercityBus:
+                    return VehicleInfo.VehicleCategory.Bus;
+
+                case CustomTransferReason.Reason.Trolleybus:
+                    return VehicleInfo.VehicleCategory.Trolleybus;
+
+                case CustomTransferReason.Reason.Tram:
+                    return VehicleInfo.VehicleCategory.Tram;
+
+                case CustomTransferReason.Reason.PassengerTrain:
+                    return VehicleInfo.VehicleCategory.PassengerTrain;
+
+                case CustomTransferReason.Reason.MetroTrain:
+                    return VehicleInfo.VehicleCategory.MetroTrain;
+
+                case CustomTransferReason.Reason.PassengerPlane:
+                    return VehicleInfo.VehicleCategory.PassengerPlane;
+
+                case CustomTransferReason.Reason.PassengerShip:
+                    return VehicleInfo.VehicleCategory.PassengerShip;
+
+                case CustomTransferReason.Reason.Ferry:
+                    return VehicleInfo.VehicleCategory.PassengerFerry;
+
+                case CustomTransferReason.Reason.Blimp:
+                    return VehicleInfo.VehicleCategory.PassengerBlimp;
+
+                case CustomTransferReason.Reason.Monorail:
+                    return VehicleInfo.VehicleCategory.Monorail;
+
+                case CustomTransferReason.Reason.CableCar:
+                    return VehicleInfo.VehicleCategory.CableCar;
+
+                case CustomTransferReason.Reason.PassengerHelicopter:
+                    return VehicleInfo.VehicleCategory.PassengerCopter;
+
+                default:
+                    return IsGoodsMaterial(material) ? VehicleInfo.VehicleCategory.CargoTruck : GetVehicleCategory(false);
             }
         }
     }

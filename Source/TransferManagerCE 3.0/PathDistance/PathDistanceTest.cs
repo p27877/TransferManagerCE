@@ -59,7 +59,9 @@ namespace TransferManagerCE
             // Check it is still valid
             PathDistanceCache.UpdateCache(mode);
 
-            ushort uiStartNode = PathNode.FindBuildingNode(reason, buildingId, bStartActive);
+            bool startEndpointActive = bStartActive;
+            bool candidateEndpointActive = !bStartActive;
+            ushort uiStartNode = PathNode.FindBuildingNode(reason, buildingId, startEndpointActive);
             if (uiStartNode != 0)
             {
                 m_startNodeId = uiStartNode;
@@ -68,7 +70,7 @@ namespace TransferManagerCE
                 m_pathDistance.Candidates.Clear();
                 foreach (ushort candidateId in candidates)
                 {
-                    ushort nodeId = PathNode.FindBuildingNode(reason, candidateId, !bStartActive);
+                    ushort nodeId = PathNode.FindBuildingNode(reason, candidateId, candidateEndpointActive);
                     if (nodeId != 0 && PathConnectedCache.IsConnected(mode, m_startNodeId, nodeId))
                     {
                         m_pathDistance.Candidates.Add(nodeId, candidateId);

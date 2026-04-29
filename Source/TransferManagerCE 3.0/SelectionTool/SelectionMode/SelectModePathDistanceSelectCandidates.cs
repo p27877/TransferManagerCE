@@ -25,11 +25,11 @@ namespace TransferManagerCE
             NetNode[] NodeBuffer = NetManager.instance.m_nodes.m_buffer;
 
             CustomTransferReason.Reason material = NetworkModeHelper.GetTransferReason(PathDistancePanel.Instance.Algorithm);
-            bool bStartActive = (PathDistancePanel.Instance.Direction == 0);
+            bool candidateEndpointActive = PathDistancePanel.Instance.Direction != 0;
 
             foreach (ushort buildingId in m_buildings)
             {
-                ushort nodeId = PathNode.FindBuildingNode(material, buildingId, bStartActive);
+                ushort nodeId = PathNode.FindBuildingNode(material, buildingId, candidateEndpointActive);
                 if (nodeId != 0)
                 {
                     RendererUtils.HighlightNode(cameraInfo, NodeBuffer[nodeId], KnownColor.magenta);
@@ -81,12 +81,13 @@ namespace TransferManagerCE
             sText += $"<color #FFFFFF>{Localization.Get("txtCandidates")}: {m_buildings.Count}</color>\n";
 
             CustomTransferReason.Reason material = NetworkModeHelper.GetTransferReason(PathDistancePanel.Instance.Algorithm);
-            bool bStartActive = (PathDistancePanel.Instance.Direction == 0);
+            bool candidateEndpointActive = PathDistancePanel.Instance.Direction != 0;
 
             // Now describe buildings
             foreach (ushort buildingId in m_buildings)
             {
-                sText += $"{CitiesUtils.GetBuildingName(buildingId, true, true)} | Node: {PathNode.FindBuildingNode(material, buildingId, bStartActive)}\n";
+                ushort nodeId = PathNode.FindBuildingNode(material, buildingId, candidateEndpointActive);
+                sText += $"{CitiesUtils.GetBuildingName(buildingId, true, true)} | Node: {nodeId}\n";
             }
 
             return sText;

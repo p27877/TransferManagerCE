@@ -12,6 +12,18 @@ namespace TransferManagerCE
     {
         const float fMAX_SEARCH_DISTANCE = 128f;
 
+        private readonly struct BspStartSegmentResult
+        {
+            public BspStartSegmentResult(ushort segmentId, Vector3 nodePosition)
+            {
+                SegmentId = segmentId;
+                NodePosition = nodePosition;
+            }
+
+            public ushort SegmentId { get; }
+            public Vector3 NodePosition { get; }
+        }
+
         private static bool s_bInitNeeded = true;
         private static NetSegment[] NetSegments = null;
         private static NetNode[] NetNodes = null;
@@ -43,6 +55,16 @@ namespace TransferManagerCE
                 {
                     Building building = Buildings[offer.Building];
                     uiNearestNodeId = FindOutsideConnectionNode(offer.Building, building.m_position);
+                }
+
+                if (uiNearestNodeId == 0)
+                {
+                    BspStartSegmentResult bspStartSegment = FindBspStartSegment(material, offer);
+                    if (bspStartSegment.SegmentId != 0)
+                    {
+                        NetSegment segment = NetSegments[bspStartSegment.SegmentId];
+                        uiNearestNodeId = GetNode(bspStartSegment.SegmentId, segment, offer.Active, bspStartSegment.NodePosition);
+                    }
                 }
 
                 if (uiNearestNodeId == 0)
@@ -105,6 +127,13 @@ namespace TransferManagerCE
             }
 
             return uiNearestNodeId;
+        }
+
+        private static ushort GetNode(ushort segmentId, NetSegment segment, bool bActive, Vector3 nodePosition)
+        {
+            return segment.Info.m_canCrossLanes
+                ? GetClosestNode(nodePosition, segmentId, segment)
+                : GetStartNode(segmentId, segment, bActive);
         }
 
         private static ushort GetClosestNode(Vector3 position, ushort segmentId, NetSegment segment)
@@ -276,7 +305,7 @@ namespace TransferManagerCE
             Building building = Buildings[buildingId];
 
             // Is there a parent building with road access
-            if (building.m_flags != 0 && 
+            if (building.m_flags != 0 &&
                (building.m_flags & Building.Flags.RoadAccessFailed) != 0 &&
                 building.m_parentBuilding != 0)
             {
@@ -332,6 +361,90 @@ namespace TransferManagerCE
             return 0;
         }
 
+        private static BspStartSegmentResult FindBspStartSegment(CustomTransferReason.Reason material, CustomTransferOffer offer)
+        {
+            if (offer.m_object.Type == InstanceType.Building)
+            {
+                return FindBspStartSegmentBuilding(offer.Building, material, offer.Active);
+            }
+
+            if (offer.m_object.Type == InstanceType.Citizen)
+            {
+                ushort buildingId = offer.GetBuilding();
+                if (buildingId != 0)
+                {
+                    return FindBspStartSegmentBuilding(buildingId, material, offer.Active);
+                }
+            }
+
+            return new BspStartSegmentResult(0, Vector3.zero);
+        }
+
+        private static BspStartSegmentResult FindBspStartSegmentBuilding(ushort buildingId, CustomTransferReason.Reason material, bool bActive)
+        {
+            Init();
+
+            Building building = Buildings[buildingId];
+            if (building.m_flags != 0 &&
+               (building.m_flags & Building.Flags.RoadAccessFailed) != 0 &&
+                building.m_parentBuilding != 0)
+            {
+                buildingId = building.m_parentBuilding;
+                building = Buildings[building.m_parentBuilding];
+            }
+
+            if (building.m_flags == 0 || (building.m_flags & Building.Flags.RoadAccessFailed) != 0)
+            {
+                return new BspStartSegmentResult(0, Vector3.zero);
+            }
+
+            return FindBspStartSegment(buildingId, material, bActive, ref building);
+        }
+
+        private static BspStartSegmentResult FindBspStartSegment(
+            ushort buildingId,
+            CustomTransferReason.Reason material,
+            bool bActive,
+            ref Building building)
+        {
+            int pointType = bActive ? BuildingSpawnPointsIntegration.PointTypeSpawn : BuildingSpawnPointsIntegration.PointTypeUnspawn;
+            VehicleInfo.VehicleCategory vehicleCategory = PathDistanceTypes.GetBspVehicleCategory(material);
+            BspStartSegmentResult startSegment = FindBspStartSegment(buildingId, material, vehicleCategory, pointType, ref building);
+            if (startSegment.SegmentId != 0)
+            {
+                return startSegment;
+            }
+
+            VehicleInfo.VehicleCategory fallbackVehicleCategory = PathDistanceTypes.GetVehicleCategory(PathDistanceTypes.IsGoodsMaterial(material));
+            return fallbackVehicleCategory != vehicleCategory
+                ? FindBspStartSegment(buildingId, material, fallbackVehicleCategory, pointType, ref building)
+                : new BspStartSegmentResult(0, Vector3.zero);
+        }
+
+        private static BspStartSegmentResult FindBspStartSegment(
+            ushort buildingId,
+            CustomTransferReason.Reason material,
+            VehicleInfo.VehicleCategory vehicleCategory,
+            int pointType,
+            ref Building building)
+        {
+            if (BuildingSpawnPointsIntegration.TryGetPointPosition(buildingId, vehicleCategory, pointType, ref building, out Vector3 pointPosition))
+            {
+                ushort segmentId = FindSegmentFromPosition(material, pointPosition, null);
+                string pointTypeName = BuildingSpawnPointsIntegration.FormatPointType(pointType);
+                string positionText = BuildingSpawnPointsIntegration.FormatVector(pointPosition);
+                if (segmentId != 0)
+                {
+                    BuildingSpawnPointsIntegration.LogDiagnosticOnce($"segment-{buildingId}-{material}-{vehicleCategory}-{pointType}", $"FindBspStartSegment success building={buildingId} material={material} category={vehicleCategory} pointType={pointTypeName} segment={segmentId} position={positionText}");
+                    return new BspStartSegmentResult(segmentId, pointPosition);
+                }
+
+                BuildingSpawnPointsIntegration.LogDiagnosticOnce($"no-segment-{buildingId}-{material}-{vehicleCategory}-{pointType}", $"FindBspStartSegment point found but no segment building={buildingId} material={material} category={vehicleCategory} pointType={pointTypeName} position={positionText}");
+            }
+
+            return new BspStartSegmentResult(0, Vector3.zero);
+        }
+
         public static Vector3 GetSidewalkPosition(InstanceID instance)
         {
             Init();
@@ -373,6 +486,11 @@ namespace TransferManagerCE
         {
             // Default method, get position then find nearest segment.
             Vector3 position = GetSidewalkPosition(instance);
+            return FindSegmentFromPosition(material, position, instance);
+        }
+
+        private static ushort FindSegmentFromPosition(CustomTransferReason.Reason material, Vector3 position, InstanceID? debugInstance)
+        {
             if (position != Vector3.zero)
             {
                 bool bIsGodsMaterial = PathDistanceTypes.IsGoodsMaterial(material);
@@ -416,7 +534,10 @@ namespace TransferManagerCE
                 {
 #if DEBUG
                     // Add these to "No Road Access" panel in debug so we can see when it isn't working
-                    RoadAccessStorage.AddInstance(instance);
+                    if (debugInstance.HasValue)
+                    {
+                        RoadAccessStorage.AddInstance(debugInstance.Value);
+                    }
 #endif
                 }
             }
@@ -514,12 +635,19 @@ namespace TransferManagerCE
             return nodeId;
         }
 
-        public static ushort FindBuildingNode(CustomTransferReason.Reason material, ushort buildingId, bool bActive)
+        public static ushort FindBuildingNode(CustomTransferReason.Reason material, ushort buildingId, bool endpointActive)
         {
+            BspStartSegmentResult bspStartSegment = PathNode.FindBspStartSegmentBuilding(buildingId, material, endpointActive);
+            if (bspStartSegment.SegmentId != 0)
+            {
+                NetSegment segment = NetSegments[bspStartSegment.SegmentId];
+                return GetNode(bspStartSegment.SegmentId, segment, endpointActive, bspStartSegment.NodePosition);
+            }
+
             ushort segmentId = PathNode.FindStartSegmentBuilding(buildingId, material);
             if (segmentId != 0)
             {
-                return PathNode.FindNearestNode(buildingId, segmentId, bActive);
+                return PathNode.FindNearestNode(buildingId, segmentId, endpointActive);
             }
 
             return 0;
