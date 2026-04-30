@@ -1,0 +1,13 @@
+{
+    "files.exclude": {
+        // Exclude everything except Source/TransferManagerCE 3.0
+        "Releases": true,
+        "Source/TransferManagerCE 1.8": true,
+        "Source/TransferManagerCE 1.9": true,
+        "Source/TransferManagerCE 2.0": true,
+        "Source/TransferManagerCE 2.1": true,
+        "Source/TransferManagerCE 2.2": true,
+        "Source/TransferManagerCE 2.3": true,
+        "Source/TransferManagerCE 2.4": true
+    }
+}

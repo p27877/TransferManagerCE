@@ -60,7 +60,7 @@
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Cities_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="CitiesHarmony.API">
       <HintPath>Assemblies\CitiesHarmony.API.dll</HintPath>
@@ -69,16 +69,16 @@
       <HintPath>Assemblies\CitiesHarmony.Harmony.dll</HintPath>
     </Reference>
     <Reference Include="ColossalManaged">
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Cities_Data\Managed\ColossalManaged.dll</HintPath>
+      <HintPath>..\..\..\Managed\ColossalManaged.dll</HintPath>
     </Reference>
     <Reference Include="ICities">
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Cities_Data\Managed\ICities.dll</HintPath>
+      <HintPath>..\..\..\Managed\ICities.dll</HintPath>
     </Reference>
     <Reference Include="UnifiedUILib">
       <HintPath>..\..\References\UnifiedUILib.dll</HintPath>
-    </Reference>    
-    <Reference Include="UnityEngine">  
-      <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Cities_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>..\..\..\Managed\UnityEngine.dll</HintPath>
     </Reference>
   </ItemGroup>
 
@@ -87,6 +87,6 @@
     <Folder Include="SelectionTool\SelectionMode\" />
   </ItemGroup>
 
-  <Import Project="..\..\SleepyCommon\SleepyCommon.projitems" Label="Shared" />
+  <Import Project="..\..\..\SleepyCommons\SleepyCommon.projitems" Label="Shared" />
 
 </Project>
