@@ -247,6 +247,11 @@ namespace TransferManagerCE.CustomManager
             }
         }
 
+        public static bool IsSupplyChainWarehouseRoutingMaterial(CustomTransferReason.Reason material)
+        {
+            return IsWarehouseMaterial(material);
+        }
+
         public static bool IsFactoryFirstMaterial(CustomTransferReason.Reason material)
         {
             switch (material)

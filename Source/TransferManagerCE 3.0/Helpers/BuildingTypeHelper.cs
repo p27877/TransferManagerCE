@@ -1029,7 +1029,7 @@ namespace TransferManagerCE
 
                             break;
                         }
-                    
+
                     case IndustrialExtractorAI buildingAI:
                         {
                             MethodInfo? methodGetOutgoingTransferReason = buildingAI.GetType().GetMethod("GetOutgoingTransferReason", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -1043,6 +1043,137 @@ namespace TransferManagerCE
             }
 
             return CustomTransferReason.Reason.None;
+        }
+
+        private static bool IsRawSupplyMaterial(CustomTransferReason.Reason material)
+        {
+            switch (material)
+            {
+                case CustomTransferReason.Reason.Oil:
+                case CustomTransferReason.Reason.Ore:
+                case CustomTransferReason.Reason.ForestProducts:
+                case CustomTransferReason.Reason.Crops:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsGenericProcessedMaterial(CustomTransferReason.Reason material)
+        {
+            switch (material)
+            {
+                case CustomTransferReason.Reason.Coal:
+                case CustomTransferReason.Reason.Petrol:
+                case CustomTransferReason.Reason.Food:
+                case CustomTransferReason.Reason.Lumber:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsDLCIntermediateSupplyMaterial(CustomTransferReason.Reason material)
+        {
+            switch (material)
+            {
+                case CustomTransferReason.Reason.Flours:
+                case CustomTransferReason.Reason.Paper:
+                case CustomTransferReason.Reason.PlanedTimber:
+                case CustomTransferReason.Reason.Petroleum:
+                case CustomTransferReason.Reason.Plastics:
+                case CustomTransferReason.Reason.Glass:
+                case CustomTransferReason.Reason.Metals:
+                case CustomTransferReason.Reason.AnimalProducts:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsSupplyChainProducer(ushort buildingId, CustomTransferReason.Reason material)
+        {
+            if (buildingId == 0)
+            {
+                return false;
+            }
+
+            switch (GetBuildingType(buildingId))
+            {
+                case BuildingType.GenericExtractor:
+                    return IsRawSupplyMaterial(material);
+
+                case BuildingType.GenericProcessing:
+                    return IsGenericProcessedMaterial(material);
+
+                case BuildingType.GenericFactory:
+                    return material == CustomTransferReason.Reason.Goods;
+
+                case BuildingType.FishFactory:
+                    return GetOutgoingTransferReason(buildingId) == material;
+
+                case BuildingType.UniqueFactory:
+                    return material == CustomTransferReason.Reason.LuxuryProducts;
+
+                case BuildingType.FishFarm:
+                case BuildingType.FishHarbor:
+                    return material == CustomTransferReason.Reason.Fish;
+
+                case BuildingType.ExtractionFacility:
+                case BuildingType.ProcessingFacility:
+                    return GetOutgoingTransferReason(buildingId) == material;
+
+                default:
+                    return false;
+            }
+        }
+
+        public static bool IsSupplyChainConsumer(ushort buildingId, CustomTransferReason.Reason material)
+        {
+            if (buildingId == 0)
+            {
+                return false;
+            }
+
+            BuildingType buildingType = GetBuildingType(buildingId);
+            switch (buildingType)
+            {
+                case BuildingType.Commercial:
+                    return material == CustomTransferReason.Reason.Goods ||
+                           material == CustomTransferReason.Reason.LuxuryProducts ||
+                           material == CustomTransferReason.Reason.Food;
+
+                case BuildingType.FishMarket:
+                    return material == CustomTransferReason.Reason.Fish;
+
+                case BuildingType.CoalPowerPlant:
+                    return material == CustomTransferReason.Reason.Coal;
+
+                case BuildingType.PetrolPowerPlant:
+                case BuildingType.BoilerStation:
+                    return material == CustomTransferReason.Reason.Petrol;
+
+                case BuildingType.GenericProcessing:
+                    return IsRawSupplyMaterial(material);
+
+                case BuildingType.GenericFactory:
+                    return IsGenericProcessedMaterial(material) || IsDLCIntermediateSupplyMaterial(material);
+
+                case BuildingType.UniqueFactory:
+                    return material == CustomTransferReason.Reason.Crops || IsDLCIntermediateSupplyMaterial(material);
+
+                case BuildingType.FishFactory:
+                    return material == CustomTransferReason.Reason.Fish;
+
+                case BuildingType.ProcessingFacility:
+                    return GetIncomingTransferReasons(buildingId).Contains(material);
+
+                default:
+                    return false;
+            }
         }
 
         public static CustomTransferReason.Reason GetPrimaryIncomingTransferReason(ushort m_buildingId)
