@@ -46,6 +46,7 @@ namespace TransferManagerCE.CustomManager
             WarehouseStorageLevels,
             WarehouseStationType,
             TransportType,
+            GoodsWarehouseRouting,
         };
 
         private bool m_bDistrictRestrictionsSupported = false;
@@ -59,6 +60,7 @@ namespace TransferManagerCE.CustomManager
         private bool m_bIsFactoryFirst = false;
         private float m_fGlobalDistanceRestriction = 0;
         private bool m_bImproveCargoWarehouseMatching = true;
+        private bool m_bRouteGoodsViaWarehouses = false;
         private Randomizer m_random = new Randomizer(Thread.CurrentThread.ManagedThreadId);
 
 
@@ -73,6 +75,7 @@ namespace TransferManagerCE.CustomManager
             m_bIsWarehouseMaterial = TransferManagerModes.IsWarehouseMaterial(material);
             m_bIsHelicopterReason = TransferManagerModes.IsHelicopterReason(material);
             m_bImproveCargoWarehouseMatching = SaveGameSettings.GetSettings().ImprovedCargoWarehouseMatching;
+            m_bRouteGoodsViaWarehouses = SaveGameSettings.GetSettings().RouteGoodsViaWarehouses;
 
             // Distance restrictions
             m_bLocalDistanceRestrictionsSupported = BuildingRuleSets.IsLocalDistanceRestrictionsSupported(material);
@@ -134,6 +137,12 @@ namespace TransferManagerCE.CustomManager
             if (eOutsideReason != ExclusionReason.None)
             {
                 return eOutsideReason;
+            }
+
+            ExclusionReason eGoodsWarehouseRoutingReason = GoodsWarehouseRoutingCanTransfer(incomingOffer, outgoingOffer, material);
+            if (eGoodsWarehouseRoutingReason != ExclusionReason.None)
+            {
+                return eGoodsWarehouseRoutingReason;
             }
 
             if (!TransferManagerModes.IsFastChecksOnly(material))
@@ -230,6 +239,44 @@ namespace TransferManagerCE.CustomManager
             }
 
             return result;
+        }
+
+        private ExclusionReason GoodsWarehouseRoutingCanTransfer(CustomTransferOffer incomingOffer, CustomTransferOffer outgoingOffer, CustomTransferReason.Reason material)
+        {
+            if (!m_bRouteGoodsViaWarehouses || material != CustomTransferReason.Reason.Goods)
+            {
+                return ExclusionReason.None;
+            }
+
+            if (IsGoodsIndustryProducer(outgoingOffer) && !incomingOffer.IsWarehouse())
+            {
+                return ExclusionReason.GoodsWarehouseRouting;
+            }
+
+            if (incomingOffer.GetBuildingType() == BuildingTypeHelper.BuildingType.Commercial && !outgoingOffer.IsWarehouse())
+            {
+                return ExclusionReason.GoodsWarehouseRouting;
+            }
+
+            return ExclusionReason.None;
+        }
+
+        private bool IsGoodsIndustryProducer(CustomTransferOffer offer)
+        {
+            if (offer.IsFactory())
+            {
+                return true;
+            }
+
+            switch (offer.GetBuildingType())
+            {
+                case BuildingTypeHelper.BuildingType.GenericFactory:
+                case BuildingTypeHelper.BuildingType.FishFactory:
+                    return true;
+
+                default:
+                    return false;
+            }
         }
 
         private ExclusionReason DistanceCanTransfer(CustomTransferOffer incomingOffer, CustomTransferOffer outgoingOffer, CustomTransferReason.Reason material)

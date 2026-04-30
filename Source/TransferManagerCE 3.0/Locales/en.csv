@@ -19,6 +19,8 @@
 "GROUP_WAREHOUSE_OPTIONS","Warehouse Options"
 "optionWarehouseFirst","Match Warehouse Offers First"
 "optionWarehouseFirst_txt","This option will match incoming warehouse offers early in the matching process which will result in most goods transfers occurring through warehouses."
+"optionRouteGoodsViaWarehouses","Route Goods via Warehouses"
+"txtRouteGoodsViaWarehouses","When enabled, industrial Goods output is routed only to warehouses, and commercial buildings receive Goods only from warehouses."
 
 "txtWarehouseSmartImportExport","This option will apply smarter importing/exporting rules to Balanced mode warehouses, they will now only be able to import up to 1/3rd full and export when fuller than 2/3rds."
 "optionWarehouseSmartImportExport","Smarter Warehouse Import / Export"
