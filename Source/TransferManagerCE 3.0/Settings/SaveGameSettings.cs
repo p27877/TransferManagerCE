@@ -15,7 +15,7 @@ namespace TransferManagerCE
             ConnectedLineOfSight = 1,
             PathDistance = 2
         }
-        const int iSAVE_GAME_SETTINGS_DATA_VERSION = 39;
+        const int iSAVE_GAME_SETTINGS_DATA_VERSION = 40;
         public static SaveGameSettings s_SaveGameSettings = new SaveGameSettings();
 
         // Settings
@@ -39,7 +39,8 @@ namespace TransferManagerCE
         // Warehouse options
         public bool WarehouseFirst = false;
         public bool ImprovedWarehouseMatching = false;
-        public bool ImprovedCargoWarehouseMatching = true; 
+        public bool ImprovedCargoWarehouseMatching = true;
+        public bool RouteGoodsViaWarehouses = false;
         public bool WarehouseSmartImportExport = false;
         public bool InterWarehouseTransfer = false;
         public int WarehouseReserveTrucksPercent = 20; // [0..100]
@@ -254,6 +255,7 @@ namespace TransferManagerCE
             StorageData.WriteBool(PoliceToughOnCrime, Data); // Version 36
             StorageData.WriteBool(WarehouseSmartImportExport, Data); // Version 37
             StorageData.WriteBool(ImprovedCargoWarehouseMatching, Data); // Version 39
+            StorageData.WriteBool(RouteGoodsViaWarehouses, Data); // Version 40
         }
 
         public static void LoadData(int iGlobalVersion, byte[] Data, ref int iIndex)
@@ -489,6 +491,10 @@ namespace TransferManagerCE
             if (iDataVersion >= 39)
             {
                 ImprovedCargoWarehouseMatching = StorageData.ReadBool(Data, ref iIndex);
+            }
+            if (iDataVersion >= 40)
+            {
+                RouteGoodsViaWarehouses = StorageData.ReadBool(Data, ref iIndex);
             }
         }
 
@@ -730,6 +736,7 @@ namespace TransferManagerCE
 
             // Warehouse
             sMessage += "WarehouseFirst: " + WarehouseFirst + "\r\n";
+            sMessage += "RouteGoodsViaWarehouses: " + RouteGoodsViaWarehouses + "\r\n";
             sMessage += "WarehouseReserveTrucks: " + WarehouseReserveTrucksPercent + "\r\n";
             
             // Import / Export

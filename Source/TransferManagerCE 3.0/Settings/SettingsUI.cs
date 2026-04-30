@@ -61,6 +61,7 @@ namespace TransferManagerCE
         private UICheckBox? m_chkOverrideGenericIndustriesHandler = null;
 
         private UICheckBox? m_chkWarehouseFirst = null;
+        private UICheckBox? m_chkRouteGoodsViaWarehouses = null;
         private SettingsSlider? m_sliderWarehouseReservePercent = null;
         private UICheckBox? m_chkImprovedWarehouseMatching = null;
         private UICheckBox? m_chkImprovedCargoWarehouseMatching = null;
@@ -395,6 +396,11 @@ namespace TransferManagerCE
             UISettings.AddDescription(panelGroupWarehouse, "optionWarehouseFirst_txt", panelGroupWarehouse, 1.0f, Localization.Get("optionWarehouseFirst_txt"));
             m_chkWarehouseFirst = (UICheckBox)groupWarehouse.AddCheckbox(Localization.Get("optionWarehouseFirst"), oSettings.WarehouseFirst, (index) => setOptionWarehouseFirst(index));
             AddSaveGameSetting(m_chkWarehouseFirst);
+            groupWarehouse.AddSpace(iSEPARATOR_HEIGHT);
+
+            UISettings.AddDescription(panelGroupWarehouse, "txtRouteGoodsViaWarehouses", panelGroupWarehouse, 1.0f, Localization.Get("txtRouteGoodsViaWarehouses"));
+            m_chkRouteGoodsViaWarehouses = (UICheckBox)groupWarehouse.AddCheckbox(Localization.Get("optionRouteGoodsViaWarehouses"), oSettings.RouteGoodsViaWarehouses, (index) => setOptionRouteGoodsViaWarehouses(index));
+            AddSaveGameSetting(m_chkRouteGoodsViaWarehouses);
             groupWarehouse.AddSpace(iSEPARATOR_HEIGHT);
 
             // Smarter Import / Export
@@ -1214,6 +1220,12 @@ namespace TransferManagerCE
             oSettings.WarehouseFirst = bChecked;
         }
 
+        public void setOptionRouteGoodsViaWarehouses(bool bChecked)
+        {
+            SaveGameSettings oSettings = SaveGameSettings.GetSettings();
+            oSettings.RouteGoodsViaWarehouses = bChecked;
+        }
+
         public void OnWarehouseSmarterImportExport(bool bChecked)
         {
             SaveGameSettings oSettings = SaveGameSettings.GetSettings();
@@ -1347,6 +1359,7 @@ namespace TransferManagerCE
                 m_chkOverrideGenericIndustriesHandler.isChecked = oSettings.OverrideGenericIndustriesHandler;
 
                 m_chkWarehouseFirst.isChecked = oSettings.WarehouseFirst;
+                m_chkRouteGoodsViaWarehouses.isChecked = oSettings.RouteGoodsViaWarehouses;
                 m_chkImprovedWarehouseMatching.isChecked = oSettings.ImprovedWarehouseMatching;
                 m_chkImprovedCargoWarehouseMatching.isChecked = oSettings.ImprovedCargoWarehouseMatching;
                 m_chkWarehouseSmarterImportExport.isChecked = oSettings.WarehouseSmartImportExport;
