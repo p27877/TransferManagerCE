@@ -247,6 +247,43 @@ namespace TransferManagerCE.CustomManager
             }
         }
 
+        public static bool IsSupplyChainWarehouseRoutingMaterial(CustomTransferReason.Reason material)
+        {
+            switch (material)
+            {
+                // Raw storage buildings
+                case CustomTransferReason.Reason.Oil:
+                case CustomTransferReason.Reason.Ore:
+                case CustomTransferReason.Reason.ForestProducts:
+                case CustomTransferReason.Reason.Crops:
+
+                // Generic industry storage
+                case CustomTransferReason.Reason.Coal:
+                case CustomTransferReason.Reason.Petrol:
+                case CustomTransferReason.Reason.Food:
+                case CustomTransferReason.Reason.Lumber:
+
+                // Industries DLC intermediate storage
+                case CustomTransferReason.Reason.Flours:
+                case CustomTransferReason.Reason.Paper:
+                case CustomTransferReason.Reason.PlanedTimber:
+                case CustomTransferReason.Reason.Petroleum:
+                case CustomTransferReason.Reason.Plastics:
+                case CustomTransferReason.Reason.Glass:
+                case CustomTransferReason.Reason.Metals:
+                case CustomTransferReason.Reason.AnimalProducts:
+
+                // Final products / fishing
+                case CustomTransferReason.Reason.Goods:
+                case CustomTransferReason.Reason.LuxuryProducts:
+                case CustomTransferReason.Reason.Fish:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
         public static bool IsFactoryFirstMaterial(CustomTransferReason.Reason material)
         {
             switch (material)
