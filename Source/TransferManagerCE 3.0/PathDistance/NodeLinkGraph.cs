@@ -105,7 +105,7 @@ namespace TransferManagerCE
         {
             lock (m_lock)
             {
-                return m_allNodeLinks.ContainsKey(nodeId);
+                return m_allNodeLinks.TryGetValue(nodeId, out NodeLinkData data) && data.Count > 0;
             }
         }
 
@@ -156,6 +156,23 @@ namespace TransferManagerCE
                 {
                     allNodeLinks[nodeId] = new NodeLinkData(nodeLinkData); // Store a copy
                 }
+            }
+
+            HashSet<ushort> sinkNodes = new HashSet<ushort>();
+            foreach (NodeLinkData nodeLinks in allNodeLinks.Values)
+            {
+                foreach (NodeLink link in nodeLinks.items)
+                {
+                    if (!allNodeLinks.ContainsKey(link.m_nodeId))
+                    {
+                        sinkNodes.Add(link.m_nodeId);
+                    }
+                }
+            }
+
+            foreach (ushort nodeId in sinkNodes)
+            {
+                allNodeLinks[nodeId] = new NodeLinkData();
             }
 
             // Add bypass links to speed up path finding.

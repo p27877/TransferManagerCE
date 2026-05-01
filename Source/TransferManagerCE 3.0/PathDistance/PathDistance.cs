@@ -85,9 +85,6 @@ namespace TransferManagerCE
                 PathData nodeData = new PathData(startNodeId, 0, 0.0f, float.MaxValue);
                 m_sortedNodes.Push(nodeData);
 
-                // Determine direction vehicle must travel
-                NetInfo.Direction direction = bStartActive ? NetInfo.Direction.Forward : NetInfo.Direction.Backward;
-
                 // Given a starting node, traverse the maps nodes to find the nearest candidate
                 int iLoopCount = 0;
                 while (m_sortedNodes.Count > 0)
@@ -122,12 +119,7 @@ namespace TransferManagerCE
                     for (int i = 0; i < linkData.Count; ++i)
                     {
                         NodeLink link = linkData[i];
-
-                        // Check direction of node as well
-                        if (link.m_direction == NetInfo.Direction.Both || link.m_direction == direction)
-                        {
-                            UpdateNode(link.m_nodeId, usMinNodeId, minNode.TravelTime() + link.m_fTravelTime);
-                        }
+                        UpdateNode(link.m_nodeId, usMinNodeId, minNode.TravelTime() + link.m_fTravelTime);
                     }
 
                     // Safety check in case we get caught in an infinite loop somehow

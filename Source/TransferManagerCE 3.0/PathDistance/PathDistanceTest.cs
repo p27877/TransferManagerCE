@@ -58,6 +58,7 @@ namespace TransferManagerCE
 
             // Check it is still valid
             PathDistanceCache.UpdateCache(mode);
+            PathConnectedCache.UpdateCache(mode);
 
             ushort uiStartNode = PathNode.FindBuildingNode(reason, buildingId, bStartActive);
             if (uiStartNode != 0)
