@@ -108,9 +108,13 @@ namespace TransferManagerCE
             {
                 foreach (NodeLink link in kvp.Value.items)
                 {
-                    if (!m_incomingCounts.TryAdd(link.m_nodeId, 1))
+                    if (m_incomingCounts.TryGetValue(link.m_nodeId, out int count))
                     {
-                        m_incomingCounts[link.m_nodeId]++;
+                        m_incomingCounts[link.m_nodeId] = count + 1;
+                    }
+                    else
+                    {
+                        m_incomingCounts[link.m_nodeId] = 1;
                     }
                 }
             }

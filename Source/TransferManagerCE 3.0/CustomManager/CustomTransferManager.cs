@@ -87,7 +87,7 @@ namespace TransferManagerCE.CustomManager
                         // Create path distance object if needed.
                         if (m_pathDistance is null)
                         {
-                            m_pathDistance = new PathDistance(false, true);
+                            m_pathDistance = new PathDistance(false, false);
                         }
 
                         // Set up lane requirements
