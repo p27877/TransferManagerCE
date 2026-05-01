@@ -106,12 +106,20 @@ namespace TransferManagerCE
 
         protected void ProcessLaneNodes(NetSegment segment, ushort usCurrentNodeId, uint laneId, float fTravelTime, NetInfo.Direction outgoingDirection)
         {
+            NetInfo info = segment.Info;
+            if (info is null)
+            {
+                return;
+            }
+
             // Loop through all sub nodes for this lane
             int iLaneLoopCount = 0;
-            while (laneId != 0)
+            int iLaneInfoIndex = 0;
+            while (laneId != 0 && iLaneInfoIndex < info.m_lanes.Length)
             {
                 NetLane lane = NetLanes[laneId];
-                if (lane.m_flags != 0 && IsLaneValid(segment, lane, outgoingDirection))
+                NetInfo.Lane laneInfo = info.m_lanes[iLaneInfoIndex];
+                if (lane.m_flags != 0 && IsLaneValid(segment, laneInfo, outgoingDirection))
                 {
                     int iNodeLoopCount = 0;
                     ushort nodeId = lane.m_nodes;
@@ -137,6 +145,7 @@ namespace TransferManagerCE
 
                 // Update laneId
                 laneId = lane.m_nextLane;
+                iLaneInfoIndex++;
 
                 // Safety check in case we get caught in an infinite loop somehow
                 if (iLaneLoopCount++ > NetManager.MAX_LANE_COUNT)
@@ -353,14 +362,14 @@ namespace TransferManagerCE
             return direction;
         }
 
-        private bool IsLaneValid(NetSegment segment, NetLane lane, NetInfo.Direction outgoingDirection)
+        private bool IsLaneValid(NetSegment segment, NetInfo.Lane laneInfo, NetInfo.Direction outgoingDirection)
         {
-            if (lane.Info is null || (lane.Info.m_laneType & m_laneTypes) == 0)
+            if ((laneInfo.m_laneType & m_laneTypes) == 0)
             {
                 return false;
             }
 
-            NetInfo.Direction laneDirection = lane.m_finalDirection;
+            NetInfo.Direction laneDirection = laneInfo.m_finalDirection;
             if ((segment.m_flags & NetSegment.Flags.Invert) != 0)
             {
                 laneDirection = NetInfo.InvertDirection(laneDirection);
