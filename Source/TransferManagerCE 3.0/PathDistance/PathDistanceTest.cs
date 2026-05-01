@@ -58,6 +58,7 @@ namespace TransferManagerCE
 
             // Check it is still valid
             PathDistanceCache.UpdateCache(mode);
+            PathConnectedCache.UpdateCache(mode);
 
             bool startEndpointActive = bStartActive;
             bool candidateEndpointActive = !bStartActive;

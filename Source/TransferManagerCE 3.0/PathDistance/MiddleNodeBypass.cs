@@ -14,6 +14,7 @@ namespace TransferManagerCE
 
         private Dictionary<ushort, NodeLinkData> m_data;
         private Dictionary<ushort, NodeLinkData> m_newLinks = new Dictionary<ushort, NodeLinkData>();
+        private Dictionary<ushort, int> m_incomingCounts = new Dictionary<ushort, int>();
 
         public MiddleNodeBypass(Dictionary<ushort, NodeLinkData> data)
         {
@@ -23,21 +24,21 @@ namespace TransferManagerCE
 
         public void Bypass()
         {
-            ushort[] keys = m_data.Keys.ToArray();
-            for (int i = 0; i < keys.Length; i++)
+            BuildIncomingCounts();
+
+            foreach (KeyValuePair<ushort, NodeLinkData> kvp in m_data)
             {
-                ushort startNodeId = keys[i];
-                NodeLinkData data = m_data[startNodeId];
-                if (data.Count != 2)
+                ushort startNodeId = kvp.Key;
+                NodeLinkData data = kvp.Value;
+                if (!IsPassThroughNode(startNodeId, data))
                 {
                     // this is a junction or a dead end, follow all middle nodes
-                    NodeLink[] links = data.items.ToArray();
-                    for (int j = 0; j < links.Length; j++)
+                    foreach (NodeLink link in data.items)
                     {
-                        NodeLink link = links[j];
                         float fTravelTime = link.m_fTravelTime;
                         int iNodeCount = 1;
-                        FollowMiddleNodes(startNodeId, link.m_nodeId, startNodeId, link.m_nodeId, link.m_direction, ref fTravelTime, ref iNodeCount);
+                        HashSet<ushort> visitedNodes = new HashSet<ushort> { startNodeId };
+                        FollowMiddleNodes(startNodeId, link.m_nodeId, startNodeId, link.m_nodeId, visitedNodes, ref fTravelTime, ref iNodeCount);
                     }
                 }
             }
@@ -49,23 +50,36 @@ namespace TransferManagerCE
             }
         }
 
-        public void FollowMiddleNodes(ushort startNodeId, ushort firstNode, ushort prevNode, ushort cuurentNodeId, NetInfo.Direction direction, ref float fTravelTime, ref int iNodeCount)
+        public void FollowMiddleNodes(ushort startNodeId, ushort firstNode, ushort prevNode, ushort cuurentNodeId, HashSet<ushort> visitedNodes, ref float fTravelTime, ref int iNodeCount)
         {
+            if (!visitedNodes.Add(cuurentNodeId))
+            {
+                return;
+            }
+
             if (m_data.TryGetValue(cuurentNodeId, out NodeLinkData linkData))
             {
                 if (linkData.Count == 2)
                 {
                     // Keep following node
-                    NodeLink[] links = linkData.items.ToArray();
-                    for (int i = 0; i < links.Length; i++)
+                    foreach (NodeLink link in linkData.items)
                     {
-                        NodeLink link = links[i];
-                        if (link.m_nodeId != prevNode && (link.m_direction == NetInfo.Direction.Both || link.m_direction == direction))
+                        if (link.m_nodeId != prevNode)
                         {
                             fTravelTime += link.m_fTravelTime;
                             iNodeCount++;
-                            FollowMiddleNodes(startNodeId, firstNode, cuurentNodeId, link.m_nodeId, Min(direction, link.m_direction), ref fTravelTime, ref iNodeCount);
+                            FollowMiddleNodes(startNodeId, firstNode, cuurentNodeId, link.m_nodeId, visitedNodes, ref fTravelTime, ref iNodeCount);
                         }
+                    }
+                }
+                else if (linkData.Count == 1 && GetIncomingCount(cuurentNodeId) == 1)
+                {
+                    NodeLink link = linkData.items[0];
+                    if (link.m_nodeId != prevNode)
+                    {
+                        fTravelTime += link.m_fTravelTime;
+                        iNodeCount++;
+                        FollowMiddleNodes(startNodeId, firstNode, cuurentNodeId, link.m_nodeId, visitedNodes, ref fTravelTime, ref iNodeCount);
                     }
                 }
                 else
@@ -76,25 +90,45 @@ namespace TransferManagerCE
                     if (iNodeCount >= iMIN_LINK_COUNT)
                     {
                         // Add link to new graph
-                        //CDebug.Log($"Adding node link: {startNodeId} LinkNode: {nodeId} TravelTime: {fTravelTime} Direction: {direction}");
                         if (!m_newLinks.TryGetValue(startNodeId, out NodeLinkData data))
                         {
                             data = new NodeLinkData(m_data[startNodeId]); // Take a copy as we cant change in place while looping
                         }
-                        data.Add(new NodeLink(cuurentNodeId, fTravelTime, direction, firstNode));
+                        data.Add(new NodeLink(cuurentNodeId, fTravelTime, NetInfo.Direction.Both, firstNode));
                         m_newLinks[startNodeId] = data;
                     }
                 }
             }
-            else
+        }
+
+        private void BuildIncomingCounts()
+        {
+            m_incomingCounts.Clear();
+            foreach (KeyValuePair<ushort, NodeLinkData> kvp in m_data)
             {
-                CDebug.Log($"ERROR: Node: {cuurentNodeId} not found in graph.");
+                foreach (NodeLink link in kvp.Value.items)
+                {
+                    if (!m_incomingCounts.TryAdd(link.m_nodeId, 1))
+                    {
+                        m_incomingCounts[link.m_nodeId]++;
+                    }
+                }
             }
         }
 
-        private static NetInfo.Direction Min(NetInfo.Direction direction1, NetInfo.Direction direction2)
+        private bool IsPassThroughNode(ushort nodeId, NodeLinkData linkData)
         {
-            return (NetInfo.Direction) Math.Min((int) direction1, (int) direction2);
+            return linkData.Count == 2 || (linkData.Count == 1 && GetIncomingCount(nodeId) == 1);
+        }
+
+        private int GetIncomingCount(ushort nodeId)
+        {
+            if (m_incomingCounts.TryGetValue(nodeId, out int count))
+            {
+                return count;
+            }
+
+            return 0;
         }
     }
 }

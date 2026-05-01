@@ -80,43 +80,47 @@ namespace TransferManagerCE
                 // Find direction of segment
                 if (GetSegmentInfo(segmentId, segment, out NetInfo.Direction direction, out float fTravelTime))
                 {
-                    if (fTravelTime > 0 && direction != NetInfo.Direction.None)
+                    if (fTravelTime > 0)
                     {
-                        // Add nodes from this segment
-                        if (segment.m_startNode != usCurrentNodeId)
+                        NetInfo.Direction outgoingDirection = GetOutgoingDirection(segment, usCurrentNodeId, direction);
+                        if (outgoingDirection != NetInfo.Direction.None)
                         {
-                            AddNodeLink(segment.m_startNode, fTravelTime, NetInfo.InvertDirection(direction));
-                        }
+                            // Build only legal outbound links from the current node.
+                            if (segment.m_startNode != usCurrentNodeId && HasDirection(outgoingDirection, NetInfo.Direction.Backward))
+                            {
+                                AddNodeLink(segment.m_startNode, fTravelTime, NetInfo.Direction.Both);
+                            }
 
-                        if (segment.m_endNode != usCurrentNodeId)
-                        {
-                            AddNodeLink(segment.m_endNode, fTravelTime, direction);
-                        }
+                            if (segment.m_endNode != usCurrentNodeId && HasDirection(outgoingDirection, NetInfo.Direction.Forward))
+                            {
+                                AddNodeLink(segment.m_endNode, fTravelTime, NetInfo.Direction.Both);
+                            }
 
-                        // Loop through all sub nodes for this segments lanes
-                        ProcessLaneNodes(segment.m_lanes, fTravelTime);
+                            // Only expose lane nodes that are reachable from this node.
+                            ProcessLaneNodes(segment, usCurrentNodeId, segment.m_lanes, fTravelTime, outgoingDirection);
+                        }
                     }
                 }
             }
         }
 
-        protected void ProcessLaneNodes(uint laneId, float fTravelTime)
+        protected void ProcessLaneNodes(NetSegment segment, ushort usCurrentNodeId, uint laneId, float fTravelTime, NetInfo.Direction outgoingDirection)
         {
             // Loop through all sub nodes for this lane
             int iLaneLoopCount = 0;
             while (laneId != 0)
             {
                 NetLane lane = NetLanes[laneId];
-                if (lane.m_flags != 0)
+                if (lane.m_flags != 0 && IsLaneValid(segment, lane, outgoingDirection))
                 {
                     int iNodeLoopCount = 0;
                     ushort nodeId = lane.m_nodes;
                     while (nodeId != 0)
                     {
                         NetNode node = NetNodes[nodeId];
-                        if (node.m_flags != 0 && IsNodeNetInfoValid(nodeId, node))
+                        if (nodeId != usCurrentNodeId && node.m_flags != 0 && IsNodeNetInfoValid(nodeId, node))
                         {
-                            // Just assume direction is both for these 
+                            // Reachable lane nodes become ordinary outbound graph links.
                             AddNodeLink(nodeId, fTravelTime, NetInfo.Direction.Both);
                         }
 
@@ -327,11 +331,58 @@ namespace TransferManagerCE
                         direction = NetInfo.Direction.Backward;
                     }
 
-                    return true;
+                    return direction != NetInfo.Direction.None;
                 }
             }
 
             return false;
+        }
+
+        private static NetInfo.Direction GetOutgoingDirection(NetSegment segment, ushort currentNodeId, NetInfo.Direction direction)
+        {
+            if (segment.m_startNode == currentNodeId)
+            {
+                return HasDirection(direction, NetInfo.Direction.Forward) ? NetInfo.Direction.Forward : NetInfo.Direction.None;
+            }
+
+            if (segment.m_endNode == currentNodeId)
+            {
+                return HasDirection(direction, NetInfo.Direction.Backward) ? NetInfo.Direction.Backward : NetInfo.Direction.None;
+            }
+
+            return direction;
+        }
+
+        private bool IsLaneValid(NetSegment segment, NetLane lane, NetInfo.Direction outgoingDirection)
+        {
+            if (lane.Info is null || (lane.Info.m_laneType & m_laneTypes) == 0)
+            {
+                return false;
+            }
+
+            NetInfo.Direction laneDirection = lane.m_finalDirection;
+            if ((segment.m_flags & NetSegment.Flags.Invert) != 0)
+            {
+                laneDirection = NetInfo.InvertDirection(laneDirection);
+            }
+
+            return HasDirection(laneDirection, outgoingDirection);
+        }
+
+        private static bool HasDirection(NetInfo.Direction source, NetInfo.Direction required)
+        {
+            return required switch
+            {
+                NetInfo.Direction.Forward => source == NetInfo.Direction.Forward ||
+                                             source == NetInfo.Direction.AvoidForward ||
+                                             source == NetInfo.Direction.Both ||
+                                             source == NetInfo.Direction.AvoidBoth,
+                NetInfo.Direction.Backward => source == NetInfo.Direction.Backward ||
+                                              source == NetInfo.Direction.AvoidBackward ||
+                                              source == NetInfo.Direction.Both ||
+                                              source == NetInfo.Direction.AvoidBoth,
+                _ => source != NetInfo.Direction.None,
+            };
         }
 
         // Cargo stations seem to label their connector nodes as Beautification for some reason
