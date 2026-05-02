@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using UnityEngine;
@@ -237,7 +238,7 @@ namespace TransferManagerCE.CustomManager
             if (ApplyCloseByOny((CustomTransferReason.Reason) job.material))
             {
                 bCloseByOnlyIncoming = true;  // Only match incoming if it is close by
-                bCloseByOnlyOutgoing = false; // Match all outgoing 
+                bCloseByOnlyOutgoing = false; // Match all outgoing
             }
             else
             {
@@ -250,7 +251,7 @@ namespace TransferManagerCE.CustomManager
                 m_logFile.LogSeparator();
                 m_logFile.LogInfo($"### MatchModeOutgoingFirst ### | IN:{job.m_incomingCountRemaining}/{job.m_incomingAmount} | OUT:{job.m_outgoingCountRemaining}/{job.m_outgoingAmount} | CloseByOnlyIncoming: {bCloseByOnlyIncoming} | CloseByOnlyOutgoing: {bCloseByOnlyOutgoing}");
             }
-            
+
             // 1: Match OUTGOING offers by descending priority first,
             // stop at 0/2 as 1/1 matches are usually not very close by.
             MatchOutgoingOffers(MatchOfferAlgorithm.Distance, 2, false, bCloseByOnlyOutgoing);
@@ -721,6 +722,7 @@ namespace TransferManagerCE.CustomManager
 
             // Reset candidate array
             m_pathDistance.Candidates.Clear();
+            PathCandidates reverseCandidates = new PathCandidates();
 
             // loop through all matching counterpart offers to determine possible candidates
             for (int counterpart_index = 0; counterpart_index < iCandidateCount; counterpart_index++)
@@ -759,18 +761,20 @@ namespace TransferManagerCE.CustomManager
                     ushort candidateNodeId = candidateOffer.GetNearestNode(m_material);
                     if (candidateNodeId != 0)
                     {
-                        // Check nodes are connected
-                        if (PathConnectedCache.IsConnected(m_mode, offerNodeId, candidateNodeId))
+                        bool bReverseSearch = !offer.Active && candidateOffer.Active;
+                        ushort startNodeId = bReverseSearch ? candidateNodeId : offerNodeId;
+                        ushort endNodeId = bReverseSearch ? offerNodeId : candidateNodeId;
+
+                        if (PathConnectedCache.IsConnected(m_mode, startNodeId, endNodeId))
                         {
-                            // Check if node already exists as we want the higher priority item to remain
-                            if (m_pathDistance.Candidates.Contains(candidateNodeId, out _))
+                            PathCandidates candidates = bReverseSearch ? reverseCandidates : m_pathDistance.Candidates;
+                            if (candidates.Contains(candidateNodeId, out _))
                             {
                                 reason = ExclusionReason.DuplicateNode;
                             }
                             else
                             {
-                                // Add to candidate list
-                                m_pathDistance.Candidates.Add(candidateNodeId, counterpart_index);
+                                candidates.Add(candidateNodeId, counterpart_index);
                             }
                         }
                         else
@@ -798,22 +802,49 @@ namespace TransferManagerCE.CustomManager
 
             // Now select closest candidate based on path distance
             int iBestCandidate = -1;
+            float fBestTravelTime = float.MaxValue;
+            long bestTicks = 0;
+            int bestNodesExamined = 0;
+            int iCandidateCountTotal = m_pathDistance.Candidates.Count + reverseCandidates.Count;
             if (m_pathDistance.Candidates.Count > 0)
             {
-                iBestCandidate = m_pathDistance.FindNearestNeighborId(offer.Active, offerNodeId, out ushort nodeId, out float fTravelTime, out long ticks, out int iNodesExamined);
+                int iCandidate = m_pathDistance.FindNearestNeighborId(offer.Active, offerNodeId, out ushort nodeId, out float fTravelTime, out long ticks, out int iNodesExamined);
+                if (iCandidate != -1)
+                {
+                    iBestCandidate = iCandidate;
+                    fBestTravelTime = fTravelTime;
+                    bestTicks = ticks;
+                    bestNodesExamined = iNodesExamined;
+                }
+            }
+
+            if (reverseCandidates.Count > 0)
+            {
+                foreach (KeyValuePair<ushort, int> kvp in reverseCandidates.Items)
+                {
+                    m_pathDistance.Candidates.Clear();
+                    m_pathDistance.Candidates.Add(offerNodeId, kvp.Value);
+
+                    int iCandidate = m_pathDistance.FindNearestNeighborId(true, kvp.Key, out ushort nodeId, out float fTravelTime, out long ticks, out int iNodesExamined);
+                    if (iCandidate != -1 && (iBestCandidate == -1 || fTravelTime < fBestTravelTime))
+                    {
+                        iBestCandidate = iCandidate;
+                        fBestTravelTime = fTravelTime;
+                        bestTicks = ticks;
+                        bestNodesExamined = iNodesExamined;
+                    }
+                }
+            }
+
+            if (m_logFile is not null)
+            {
                 if (iBestCandidate == -1)
                 {
-                    if (m_logFile is not null)
-                    {
-                        m_logFile.LogInfo($"       Path Distance Match - Failed, no candidate found. StartNode {offerNodeId} CandidateCount: {m_pathDistance.Candidates.Count} NodesExamined:{iNodesExamined}");
-                    }
+                    m_logFile.LogInfo($"       Path Distance Match - Failed, no candidate found. StartNode {offerNodeId} CandidateCount: {iCandidateCountTotal} NodesExamined:{bestNodesExamined}");
                 }
                 else
                 {
-                    if (m_logFile is not null)
-                    {
-                        m_logFile.LogInfo($"       Path Distance Match - #{iBestCandidate.ToString("0000")} [{offerCandidates[iBestCandidate].m_object.Type}: {offerCandidates[iBestCandidate].m_object.Index}] TravelTime:{fTravelTime} Time:{(ticks * 0.0001).ToString("N3")}ms NodesExamined:{iNodesExamined}");
-                    }
+                    m_logFile.LogInfo($"       Path Distance Match - #{iBestCandidate.ToString("0000")} [{offerCandidates[iBestCandidate].m_object.Type}: {offerCandidates[iBestCandidate].m_object.Index}] TravelTime:{fBestTravelTime} Time:{(bestTicks * 0.0001).ToString("N3")}ms NodesExamined:{bestNodesExamined}");
                 }
             }
 
@@ -934,7 +965,10 @@ namespace TransferManagerCE.CustomManager
                     ushort candidateNodeId = candidateOffer.GetNearestNode(job.material);
                     if (candidateNodeId != 0)
                     {
-                        if (!PathConnectedCache.IsConnected(m_mode, offerNodeId, candidateNodeId))
+                        bool bReverseSearch = !offer.Active && candidateOffer.Active;
+                        ushort startNodeId = bReverseSearch ? candidateNodeId : offerNodeId;
+                        ushort endNodeId = bReverseSearch ? offerNodeId : candidateNodeId;
+                        if (!PathConnectedCache.IsConnected(m_mode, startNodeId, endNodeId))
                         {
                             reason = ExclusionReason.NotConnected;
                         }
